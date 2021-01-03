@@ -1,5 +1,5 @@
 ---
-title: "R1 - Data reporting & analysis"
+title: "R1 - Data reporting and analysis"
 author: "Richard T. Watson"
 date: "`r Sys.time()`"
 output:
