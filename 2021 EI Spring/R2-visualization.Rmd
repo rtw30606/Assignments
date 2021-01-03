@@ -1,0 +1,103 @@
+---
+title: "R2 - Visualization"
+author: "Richard T. Watson"
+date: "`r Sys.time()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r message = F}
+library(tidyverse)
+library(lubridate)
+```
+
+## Prepare the data
+```{r message = F}
+url <-  "http://www.richardtwatson.com/data/ATLweather.csv"
+w <- read_delim(url,delim=',')
+url <-  "http://www.richardtwatson.com/data/electricityprices.csv"
+e <- read_delim(url,delim=',')
+m <- inner_join(w,e,by=c("Timestamp" = 'timestamp'))
+```
+
+
+## a.
+Graph the relationship between temperature and electricity price with a smoother. What do you conclude?
+
+```{r message = F}
+ggplot(m,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+### Conclusion
+Electricity is more expensive on very cold and very hot days.
+
+
+## b.
+Graph the relationship between the temperature and electricity price for winter (January to March) with a smoother.
+
+```{r message = F}
+winter <- m %>% 
+  filter(month(Timestamp) >= 1 & month(Timestamp) <= 3)
+ggplot(winter,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+## c.
+Graph the relationship between the temperature and electricity price for summer (July to September) with a smoother.
+
+```{r message = F}
+summer <- m %>% 
+  filter(month(Timestamp) >= 7 & month(Timestamp) <= 9)
+ggplot(summer,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+
+
+## d.
+Create a column that categorizes a day as either 'week' or 'weekend'. Create a visualization showing separate line graphs for the relationship between the temperature and electricity price for the week and the weekend. What do you conclude?
+
+```{r message = F}
+# Separating work and weekend days
+m$dayType <- case_when (
+  wday(m$Timestamp) > 1 & wday(m$Timestamp) < 7 ~ 'Work',
+  wday(m$Timestamp) == 1 | wday(m$Timestamp) == 7 ~ 'Weekend'
+)
+ggplot(m,aes(Temperature, cost, color = dayType)) +
+  geom_point(color='grey') +
+  geom_smooth() + 
+  labs(
+  x = 'Temperature',
+  y = 'Electricity cost in cents/kWh',
+  color = 'Day type')
+```
+
+### Conclusion
+On very cold and very hot days, electricity is cheaper on the weekend, probably because the demand is lower with many office and factories  closed. The effect is more pronounced in summer because electricity is used for cooling, and in winter gas and electricity are used for heating.
+
+## e.
+Create a column (geom_col) chart showing average electricity generated for each day of the month in kWh for a house with 20m2 of solar panels of 22% efficiency. Label the months 1 through 12 consecutively.
+
+```{r message = F}
+url <-  "http://www.richardtwatson.com/data/SolarRadiationAthens.csv"
+s <- read_delim(url,delim=',')
+s2 <- s %>% 
+  group_by(month = month(TimeStamp)) %>% 
+  summarize(Mean_kWh = mean(SolarWatt*24/1000*20*.22))
+ggplot(s2,aes(month,Mean_kWh)) +
+  geom_col(fill='orange') + 
+  xlab('Month') +
+  ylab('Mean electricity generated in kWh/day') +
+  geom_smooth() +
+  scale_x_continuous(breaks = seq(1, 12, by = 1))
+```

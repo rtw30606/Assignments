@@ -1,0 +1,113 @@
+---
+title: "R1 report"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+## Author: Richard T. Watson
+```{r echo = FALSE, results = 'asis'}
+cat(paste('\n###','Date:', Sys.Date()))
+```
+
+```{r message = F}
+library(dplyr)
+library(readr)
+library(lubridate)
+```
+
+## a.
+Download the data for solar radiation (a timestamp and solar radiation in watts/m2), Atlanta weather (a timestamp, air temperature, humidity, and precipitation), and electricity prices (a timestamp and cost in cents per kWh) for Athens. The files measure data for different time periods, one every 2 minutes and the others hourly. Assume the 'on the hour' measure of solar radiation is a good estimate for the 30 minutes either side.
+Merge the files for electricity price and weather
+
+## b.
+Compute the correlation between temperature and electricity price. What do you conclude?
+
+```{r}
+url <-  "http://www.richardtwatson.com/data/ATLweather.csv"
+w <- read_delim(url,delim=',')
+url <-  "http://www.richardtwatson.com/data/electricityprices.csv"
+e <- read_delim(url,delim=',')
+m <- inner_join(w,e,by=c("Timestamp" = 'timestamp'))
+cor.test(m$Temperature,m$cost)
+```
+
+## Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost.
+* The correlation is *small* (0.18) as it is between .1 and .3, as shown in the following [table](https://en.wikipedia.org/wiki/Effect_size):
+
+| Correlation coefficient | Effect size | 
+|-------------------------|:-----------:|
+| .10 - .30               |    Small    |
+| .30 - .50               |   Moderate  |
+| > .50                   |    Large    |
+
+* Given the small correlation, there are likely other factors that influence electricity cost, such as generation capacity
+
+**Note:** The p-value tells you whether there is a relationship and the correlation coefficient indicates the size of that relationship.
+
+## c.
+Extract the data for July through September (Summer) and redo the correlation What do you conclude?
+
+```{r}
+Summer <- m %>% filter((month(Timestamp) >= 7 & month(Timestamp) <= 9))
+cor.test(Summer$Temperature,Summer$cost)
+```
+## Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost during summer.
+* The correlation is  *large* (0.51).
+There appears to be generation capacity problem in summer, usually the hottest months of the year, so electricity prices are raised to dampened demand on hot days.
+
+## c.
+Extract the data for January through March (Winter) and redo the correlation What do you conclude?
+
+```{r}
+Winter <- m %>% filter((month(Timestamp) >= 1 & month(Timestamp) <= 3))
+cor.test(Winter$Temperature,Winter$cost)
+```
+## Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost during summer.
+* The correlation is negative and *moderate* (-.32).
+There appears to be generation capacity problem in winter, usually the coldest months of the year, so electricity prices are raised to dampened demand on cold days.
+## d.
+Using the Athens solar radiation data, compute the average (one value) and monthly averages (12 values) of solar radiation. Compare the data with solar radiation for Phoenix, which measures solar radiation in kWh/m2/day (file). For the Athens data, you will need to make a conversion by multiplying the power in watts by 24 and dividing by 1000. Use a statistical test to decide whether Athens has a similar solar radiation profile to Phoenix.
+
+### Yearly average
+
+```{r}
+url <-  "http://www.richardtwatson.com/data/SolarRadiationAthens.csv"
+s <- read_delim(url,delim=',')
+mean(s$SolarWatt)
+```
+
+### Monthly average
+
+```{r}
+s %>% 
+  group_by(month(TimeStamp)) %>% 
+  summarize(meanMonth = mean(SolarWatt))
+```
+
+### Comparison of Athens and Phoenix after converting Athens to kWh
+```{r}
+conv <- 24/1000
+s %>% 
+  group_by(year(TimeStamp)) %>% 
+  summarize(meanYear = mean(SolarWatt)*conv)
+s2 <- s %>% 
+  group_by(month = month(TimeStamp)) %>% 
+  summarize(meanMonth = mean(SolarWatt)*conv)
+
+url <- "http://www.richardtwatson.com/data/Phoenix.csv"
+t <- read_delim(url, delim=',')
+
+cor.test(s2$meanMonth,t$Solar)
+```
+
+# Conclusions
+* The solar radiation data for Athens and Phoenix are correlated (p < .05). They have the same profile, but this does not mean the total radiation received is the same.
+* Correlation is *large* (0.94)
+
+

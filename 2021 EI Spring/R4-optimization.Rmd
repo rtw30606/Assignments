@@ -1,0 +1,143 @@
+---
+title: "R4 - Optimization"
+author: "Richard T. Watson"
+date: "`r Sys.time()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r message=F}
+library(tidyverse)
+library(lpSolveAPI)
+```
+# a.
+A small farmer can produce two types of crops, A and B, which will generate profits of $30 and $25 per bushel (35 liters). The crops vary in the units of resources required and available, as shown in the following table: 
+
+| Resource   | Crop A | Crop B | Units available |
+|------------|:------:|:------:|:---------------:|
+| Land       |    2   |    3   |        60       |
+| Water      |    5   |    2   |        80       |
+| Fertilizer |    3   |    2   |        60       |
+| Labor      |    1   |    2   |        40       |
+
+For example, one bushel of crop A, requires 2 units of land, 5 units of water, and so on. 
+
+- What's the maximum profit and how much of each crop should be produced? 
+- What allocation of resources will maximize the farmer's profit? 
+- Use shadow price analysis to determine what additional resources the farmer should seek?
+
+```{r message = F}
+#model with 0 constraints and 2 decision
+lpmodel <- make.lp(0,2)
+obj <-  c(30, 25)
+set.objfn(lpmodel, c(obj[1], obj[2]))
+# constraint coefficients
+con <-  matrix(c(2, 3, 
+                 5, 2,
+                 3, 2,
+                 1, 2),
+                nrow=4,ncol=2, byrow = T)
+add.constraint(lpmodel, c(con[1,1], con[1,2]), "<=", 60)
+add.constraint(lpmodel, c(con[2,1], con[2,2]), "<=", 80)
+add.constraint(lpmodel, c(con[3,1], con[3,2]), "<=", 60)
+add.constraint(lpmodel, c(con[4,1], con[4,2]), "<=", 40)
+#set objective direction and hide the output
+invisible(lp.control(lpmodel,sense = 'max'))
+print(lpmodel)
+solve(lpmodel)
+```
+
+# Maximum profit
+```{r message = F}
+p <-  get.objective(lpmodel) 
+print(paste0('Profit: $',round(p[1],2)), quote = F)
+v <-  get.variables(lpmodel)
+print(paste0('Bushels of crop A: ', round(v[1],2)), quote = F)
+print(paste0('Bushels of crop B: ', round(v[2],2)), quote = F)
+```
+
+# Resource allocation
+```{r message = F}
+print(paste('Units of land: ', round((con[1,1]*v[1] + con[1,2]*v[2]),2)), quote = F)
+print(paste('Units of water ', round((con[2,1]*v[1] + con[2,2]*v[2]),2)), quote = F)
+print(paste('Units of fertilizer: ', round((con[3,1]*v[1] + con[3,2]*v[2]),2)), quote = F)
+print(paste('Units of Labor: ', round((con[4,1]*v[1] + con[4,2]*v[2]),2)), quote = F)
+```
+
+## Shadow price analysis
+```{r message = F}
+d <-  get.dual.solution(lpmodel)
+print(paste('One more unit of land will increase profit by: ', round(d[2],2)), quote = F)
+print(paste('One more unit of water will increase profit by: ', round(d[3],2)), quote = F)
+print(paste('One more unit of fertilizer will increase profit by: ', round(d[4],2)), quote = F)
+print(paste('One more unit of labor will increase profit by: ', round(d[4],2)), quote = F)
+```
+# b.
+A pizza chain in Athens has three locations, and in the last five minutes has received orders for pizzas to be delivered to five addresses in Athens. Assuming ordering is centrally managed, which store should assigned the making of the five orders to minimize delivery distance? What is the shortest route in miles?
+
+## Pizza chain locations
+
+- 700 E. Broad St.
+- 1591 S. Lumpkin St
+- 120 Alps Rd
+
+## Delivery locations
+- 170 River Rd
+- 100 Kentucky Circle
+- 558 West Broad St
+- 125 Greek Park Circle
+- 1084 Prince Ave. 
+
+```{r message = F}
+library(tidyverse)
+library(TSP)
+library(measurements)
+library(googleway)
+k <- read_csv("~/Dropbox/R/API keys/GoogleAPIkey.txt")
+```
+
+# Use a loop to find the delivery distance from each store and select the minimum as the pizza making store. 
+```{r message = F}
+maker <-  c('700 E. Broad St, Athens, GA', '1591 S. Lumpkin St, Athens, GA','120 Alps Rd, Athens, GA')
+mindist <-  9999999
+num_makers = length(maker)
+for(s in 1:num_makers) {
+  locations <-  c(maker[s], "170 River Rd, Athens, GA", "100 Kentucky Circle, Athens, GA", "558 West Broad St, Athens, GA", "125 Greek Park Circle, Athens, GA", "1084 Prince Ave, Athens, GA")
+# Set a pickup store as the starting point for the tour
+start_location <- 1
+  l <-  length(locations) # number of locations is length of vector
+  # set up distance as symmetric matrix
+  distMat <-  matrix(0,l,l)
+  # compute distances and enter into cells
+  for(i in 1:(l-1)){
+    for(j in (i+1):l){
+     t <-  google_distance(locations[i],locations[j],mode=c('driving'),simplify = TRUE, key = k$key)
+     tx <- t$rows$elements[[1]]$distance$value*conv_unit(1,'m','mi') # convert meters to miles
+     distMat[i,j] <-  tx
+      distMat[j,i] <-  tx
+    }
+  }
+  tsp <-  TSP(distMat,locations)
+  # Set store as the starting point
+  solve_TSP(tsp,start = start_location)
+  tour <- solve_TSP(tsp)
+  labels(tour)
+  as.integer(tour)
+  tour_length(tour)
+  print(paste0('Store: ', maker[s]), quote=F)
+  print(paste0(round(tour_length(tour),2), ' miles'), quote=F)
+  print(paste0('Route'), quote=F)
+  print(labels(tour), quote=F)
+  print('' , quote=F)
+  if(tour_length(tour) < mindist) {
+    mindist <-  tour_length(tour)
+    mindeliver <-  s
+    mintour <-  tour
+  }
+}
+print("Minimum distance store", quote=F)
+print(maker[mindeliver], quote=F)
+print(paste0(round(mindist,2),' miles'), quote=F)
+```
+

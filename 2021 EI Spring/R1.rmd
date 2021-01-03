@@ -1,0 +1,103 @@
+---
+title: "R1 - Data reporting & analysis"
+author: "Richard T. Watson"
+date: "`r Sys.time()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r message = F}
+library(tidyverse)
+library(lubridate)
+```
+
+## a.
+Access the data Atlanta [weather](http://www.richardtwatson.com/data/ATLweather.csv) (a timestamp, air temperature, humidity, and precipitation), and  [electricity prices](http://www.richardtwatson.com/data/electricityprices.csv) (a timestamp and cost in cents per kWh).
+Merge the files for electricity price, and weather.
+
+```{r message = F}
+url <-  "http://www.richardtwatson.com/data/ATLweather.csv"
+w <- read_delim(url,delim=',')
+url <-  "http://www.richardtwatson.com/data/electricityprices.csv"
+e <- read_delim(url,delim=',')
+m <- inner_join(w,e,by=c("Timestamp" = 'timestamp'))
+```
+
+## b.
+Compute the correlation between temperature and electricity price. What do you conclude?
+
+```{r}
+cor.test(m$Temperature,m$cost)
+```
+
+### Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost. As the temperature increases, electricity prices increase.
+* The correlation is *small* (0.18) as it is between .1 and .3, as shown in the following [table](https://en.wikipedia.org/wiki/Effect_size):
+
+| Correlation coefficient | Effect size | 
+|:-----------------------:|:-----------:|
+| .10 - .30               |    Small    |
+| .30 - .50               |   Moderate  |
+| > .50                   |    Large    |
+
+* Given the small correlation, there are likely other factors that influence electricity cost, such as generation capacity
+
+**Note:** The p-value tells you whether there is a relationship and the correlation coefficient indicates the size of that relationship.
+
+## c. Extract the data for August and redo the correlation What do you conclude?
+
+```{r}
+Aug <- m %>% filter((month(Timestamp) == 8))
+cor.test(Aug$Temperature,Aug$cost)
+```
+### Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost during August
+* The correlation is  *large* (0.56).
+There appears to be generation capacity problem in August, usually the hottest months of the year, so electricity prices are raised to dampened demand on hot days.
+
+## d.
+Extract the data for January and redo the correlation What do you conclude?
+
+```{r}
+Jan <- m %>% filter((month(Timestamp) == 1))
+cor.test(Jan$Temperature,Jan$cost)
+```
+### Conclusion
+* As the p-value is less than .05, conclude that there is a relationship between temperature and electricity cost during winter
+* The correlation is negative and *moderate* (-.4).
+There appears to be generation capacity problem in January, usually the coldest month of the year, so electricity prices are raised to dampened demand on cold days.
+
+## e.
+Download the data for [solar radiation](http://www.richardtwatson.com/data/SolarRadiationAthens.csv) (a timestamp and solar radiation in watts/m2) for Athens. Compute the average, min, and max for solar radiation for the year (one value for each of the three measures). 
+
+### Average, min, and max
+
+```{r}
+url <- "http://www.richardtwatson.com/data/SolarRadiationAthens.csv"
+s <- read_delim(url,delim=',')
+mean(s$SolarWatt)
+min(s$SolarWatt)
+max(s$SolarWatt)
+
+```
+
+## f. 
+Assuming the total area for capturing solar energy by PV cells for a house is 25m2 (269 square feet)) and solar cells are 20% efficient (i.e., 20% of the radiation received is converted into electricity). How much electricity in kWh will be generated on average each day in August and January?
+
+### Explanation
+* A solar panel of 20% efficiency receiving 200 Watts/m^2 of solar radiation will generate 40 Watts/m^2 of electricity
+* A solar panel system generating 1000 Watts consistently for one hour generates 1 kWh. In a day it would generate 24kWh (1000*24/1000). Of course, the sun does not shine consistently for 24 hours.
+
+
+```{r}
+Aug <- s %>% filter((month(TimeStamp) == 8))
+round(mean(Aug$SolarWatt)*24/1000*25*.2,2)
+Jan <- s %>% filter((month(TimeStamp) == 1))
+round(mean(Jan$SolarWatt)*24/1000*25*.2,2)
+```
+
+### Findings
+About 24.56 kWh will be generated each day in August.
+About 14.43 kWh will be generated each day in January.
+

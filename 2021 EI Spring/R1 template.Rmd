@@ -1,0 +1,69 @@
+---
+title: "R1 - Data analyis"
+author: "Your name"
+date: "`r Sys.time()`"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r message = F}
+library(tidyverse)
+library(lubridate)
+```
+
+## a.
+Download  data Atlanta [weather](http://www.richardtwatson.com/data/ATLweather.csv) (a timestamp, air temperature, humidity, and precipitation), and  [electricity prices](http://www.richardtwatson.com/data/electricityprices.csv) (a timestamp and cost in cents per kWh).
+Merge the files for electricity price, and weather.
+
+```{r message = F}
+# R code for a.
+```
+
+## b.
+Compute the correlation between temperature and electricity price. What do you conclude?
+
+```{r}
+# R code for b.
+```
+
+### Conclusion
+
+
+## c.
+Extract the data for August and redo the correlation What do you conclude?
+
+```{r}
+# R code for c.
+```
+### Conclusion
+
+## d.
+Extract the data for January and redo the correlation What do you conclude?
+
+```{r}
+# R code for d.
+```
+
+### Conclusion
+
+## e.
+Download data for solar radiation (a timestamp and solar radiation in watts/m2) for Athens. Compute the average, min, and max for solar radiation for the year (one value for each of the three measures). 
+
+### Average, min, and max
+
+```{r}
+# R code for e.
+```
+
+## f. 
+Assuming the total area for capturing solar energy by PV cells for a house is 25m2 (269 square feet)) and solar cells are 20% efficient (i.e.., 20% of the photons received are converted into electrons). How much electricity in kWh will be generated on average each day in August and January?
+
+```{r}
+# R code for f.
+```
+
+### Findings
+
+
