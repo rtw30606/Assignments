@@ -1,0 +1,94 @@
+---
+title: "R2 - Visualization"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+## Author: Richard T. Watson
+```{r echo = FALSE, results = 'asis'}
+cat(paste('\n###','Date:', Sys.Date()))
+```
+
+```{r message = F}
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+
+## Prepare the data
+```{r}
+url <-  "http://www.richardtwatson.com/data/ATLweather.csv"
+w <- read_delim(url,delim=',')
+url <-  "http://www.richardtwatson.com/data/electricityprices.csv"
+e <- read_delim(url,delim=',')
+m <- inner_join(w,e,by=c("Timestamp" = 'timestamp'))
+```
+
+
+## a.
+Graph the relationship between temperature and electricity price with a smoother.
+
+```{r}
+ggplot(m,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+## b.
+Graph the relationship between the temperature and electricity price for winter with a smoother.
+
+```{r}
+period <- m %>% filter(month(Timestamp) >= 1 & month(Timestamp) <= 3)
+ggplot(period,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+## c.
+Graph the relationship between the temperature and electricity price for summer with a smoother.
+
+```{r}
+period <- m %>% filter(month(Timestamp) >= 7 & month(Timestamp) <= 9)
+ggplot(period,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+How do you explain the anomaly in summer prices? Create a graph that supports your explanation.
+
+```{r}
+period<- m %>% filter(month(Timestamp) >= 7 & month(Timestamp) <= 9 & wday(Timestamp) > 1 & wday(Timestamp) < 7)
+ggplot(period,aes(Temperature,cost)) +
+  geom_point(color='skyblue') + 
+  geom_smooth() + 
+  xlab('Temperature') +
+  ylab('Electricity cost in cents/kWh')
+```
+
+There is less electricity used on the weekends (days 1 and 7). The preceding graph with these values omitted shows the as temperature increases, prices increase.
+
+## d.
+Create a column (geom_col) chart showing average solar radiation for each month in kWh. Label the months 1 through 12 consecutively.
+```{r}
+url <-  "http://www.richardtwatson.com/data/SolarRadiationAthens.csv"
+s <- read_delim(url,delim=',')
+s2 <- s %>% 
+  group_by(month = month(TimeStamp)) %>% 
+  summarize(MeanSolarWatt = mean(SolarWatt*24/1000))
+ggplot(s2,aes(month,MeanSolarWatt)) +
+  geom_col(fill='orange') + 
+  xlab('Month') +
+  ylab('Mean solar radiation in kWh/m2/day') +
+  scale_x_continuous(breaks = seq(1, 12, by = 1))
+```
+
+
+

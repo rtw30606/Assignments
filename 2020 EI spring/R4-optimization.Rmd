@@ -1,0 +1,160 @@
+---
+title: "R4 Optimization"
+output:
+  pdf_document: default
+  html_notebook: default
+  self_contained: no
+  word_document: default
+  always_allow_html: true
+  html_document:
+    df_print: paged
+---
+
+## Author: Richard T. Watson
+```{r echo = FALSE, results = 'asis'}
+cat(paste('\n###','Date:', Sys.Date()))
+```
+
+```{r message=F}
+library(lpSolveAPI)
+```
+## a.
+Solve a transportation problem.
+
+# Transportation cost minimization
+```{r}
+#model with 0 constraints and 16 decision
+lpmodel <- make.lp(0,16)
+# Shipping cost per unit laid out for ease of checking
+set.objfn(lpmodel, c(15,20,25,15,
+                     25,15,20,10,
+                     15,30,20,20,
+                     30,30,35,45))
+# Supply constraints
+add.constraint(lpmodel, c(1,1,1,1,
+                          0,0,0,0,
+                          0,0,0,0,
+                          0,0,0,0), "<=", 10)
+add.constraint(lpmodel, c(0,0,0,0,
+                          1,1,1,1,
+                          0,0,0,0,
+                          0,0,0,0), "<=", 11)
+add.constraint(lpmodel, c(0,0,0,0,
+                          0,0,0,0,
+                          1,1,1,1,
+                          0,0,0,0), "<=", 19)
+add.constraint(lpmodel, c(0,0,0,0,
+                          0,0,0,0,
+                          0,0,0,0,
+                          1,1,1,1), "<=", 15)
+# Demand constraints
+add.constraint(lpmodel, c(1,0,0,0,
+                          1,0,0,0,
+                          1,0,0,0,
+                          1,0,0,0), ">=", 11)
+add.constraint(lpmodel, c(0,1,0,0,
+                          0,1,0,0,
+                          0,1,0,0,
+                          0,1,0,0), ">=", 18)
+add.constraint(lpmodel, c(0,0,1,0,
+                          0,0,1,0,
+                          0,0,1,0,
+                          0,0,1,0), ">=", 16)
+add.constraint(lpmodel, c(0,0,0,1,
+                          0,0,0,1,
+                          0,0,0,1,
+                          0,0,0,1), ">=", 10)
+#row names (constraints)
+RowNames<- c("Alpha","Beta","Gamma","Delta","Phi","Chi","Psi","Omega")
+#columns (decision variables)
+ColNames<- c("AlphatoPhi","AlphatoChi", "AlphatoPsi", "AlphatoOmega", "BetatoPhi", "BetatoChi","BetatoPsi","BetatoOmega","GammatoPhi","GammatoChi", "GammatoPsi", "GammatoOmega", "DeltatoPhi", "DeltatoChi", "DeltatoPsi", "DeltatoOmega")
+dimnames(lpmodel)<- list(RowNames, ColNames)
+write.lp(lpmodel, "lpmodel.lp", type= c("lp"), use.names = c(TRUE,TRUE))
+solve(lpmodel)
+```
+
+## Minimum cost
+```{r}
+get.objective(lpmodel) # this is the minimum cost
+```
+
+## Solution
+```{r}
+mat <-  t(matrix(get.variables(lpmodel),4,4)) # transpose results matrix so row is source
+rows <-  c("Alpha","Beta","Gamma","Delta")
+cols <-  c("Phi","Chi","Psi","Omega")
+dimnames(mat) <-  list(rows, cols)
+mat
+```
+
+## Shadow price analysis
+```{r}
+get.variables(lpmodel)
+get.dual.solution(lpmodel)
+```
+
+## Production increase decision
+1. Shadow prices are -10 (Alpha), -15 (Beta), -10 (Gamma), 0 (Delta)
+1. Increasing production at Beta will reduce cost by 15 for the first additional unit
+
+## b.
+
+A pizza chain in Athens has three locations, and in the last five minutes has received orders for pizzas to be delivered to five addresses in Athens. Assuming ordering is centrally managed, which store should assigned the making of the five orders to minimize delivery distance? What is the shortest route in miles?
+
+```{r}
+library(TSP)
+library(ggplot2)
+library(ggmap)
+library(mapproj)
+library(measurements)
+library(readr)
+library(googleway)
+k <- read_csv("~/Dropbox/R/API keys/GoogleAPIkey.txt")
+```
+
+# Use a loop to find the delivery distance from each store and select the minimum as the pizza making store. 
+```{r}
+maker <-  c('700 E. Broad, Athens, GA', '1591 S. Lumpkin, Athens, GA','120 Alps, Athens, GA')
+mindist <-  9999999
+num_makers = length(maker)
+for(s in 1:num_makers) {
+  locations <-  c(maker[s], "170 River Rd, Athens, GA", "785 S. Milledge Ave., Athens, GA", "558 West Broad St, Athens, GA", "125 Greek Park Circle, Athens, GA", "1084 Prince Ave., Athens, GA")
+# Set a pickup store as the starting point for the tour
+start_location <- 1
+  l <-  length(locations) # number of locations is length of vector
+  # set up distance as symmetric matrix
+  distMat <-  matrix(0,l,l)
+  # compute distances and enter into cells
+  for(i in 1:(l-1)){
+    for(j in (i+1):l){
+     t <-  google_distance(locations[i],locations[j],mode=c('driving'),simplify = TRUE, key = k$key)
+     tx <- t$rows$elements[[1]]$distance$value*conv_unit(1,'m','mi') # convert meters to miles
+     distMat[i,j] <-  tx
+      distMat[j,i] <-  tx
+    }
+  }
+  tsp <-  TSP(distMat,locations)
+  # Set store as the starting point
+  solve_TSP(tsp,start = start_location)
+  tour <- solve_TSP(tsp)
+  labels(tour)
+  as.integer(tour)
+  tour_length(tour)
+  print(maker[s])
+  print(tour_length(tour))
+  if(tour_length(tour) < mindist) {
+    mindist <-  tour_length(tour)
+    mindeliver <-  s
+    mintour <-  tour
+  }
+}
+```
+
+# The best store for delivery
+```{r}
+print("Minimum distance solution")
+print(maker[mindeliver])
+print(round(mindist,2))
+```
+
+

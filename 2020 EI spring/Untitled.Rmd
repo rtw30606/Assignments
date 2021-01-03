@@ -1,0 +1,46 @@
+---
+title: "R2"
+author: "Scott Hall and Cindy Zhang"
+date: "2/24/2020"
+output:
+  html_document: null
+  pdf_document: default
+---
+
+```{r message = F}
+library(dplyr)
+library(readr)
+library(lubridate)
+library(ggplot2)
+```
+
+```{r}
+Athens <- read_csv("http://www.richardtwatson.com/data/SolarRadiationAthens.csv")
+electricityprices <- read_csv("http://www.richardtwatson.com/data/electricityprices.csv")
+ATLweather <- read_csv("http://www.richardtwatson.com/data/ATLweather.csv")
+weather_prices <- inner_join(ATLweather, electricityprices,by=c("Timestamp" = 'timestamp'))
+```
+
+## A Graph the relationship between temperature and electricity price with a smoother.
+
+```{r}
+ggplot(weather_prices, aes(x=Temperature, y= cost)) + 
+        geom_point() +
+        geom_smooth()
+```
+#### Conclusion for part A:
+Energy Prices and Tempeture have a parabolic relationship seen by the fact that energy cost is highest when tempeture is at its exteremities.
+
+## B) Graph the relationship between the temperature and electricity price for winter with a smoother. 
+
+```{r}
+winter <- weather_prices %>% filter((month(Timestamp) >= 1 & month(Timestamp) <= 3))
+ggplot(winter, aes(x=Temperature, y= cost)) + 
+        geom_point() +
+        geom_smooth()
+
+```
+#### Conclusion for part B:
+In the winter months, energy prices remain quite low until the temperature drops below 30 degrees.
+
+## C) Graph the relationship between the temperature and electricity price for summer with a smoother. How do you explain the anomaly in summer prices? Create a graph that supports your explanation.
